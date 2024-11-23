@@ -135,6 +135,15 @@ module OodCore
         # Each optional argument specifies job dependencies (after, afterok, afternotok, afterany).
         def submit(script, after: [], afterok: [], afternotok: [], afterany: [])
 
+          content = if script.shell_path.nil?
+            script.content
+          else
+            "#!#{script.shell_path}\n#{script.content}"
+          end
+
+          native = script.native.join("\n")
+          script.content.concat(native)
+
           duration = script.content.match(/elapstim_req\s*=\s*(\d{1,2}(:\d{1,2})?(:\d{1,2})?)/)
           duration = duration ? duration[1] : nil
           queue_name = script.content.match(/#PBS\s*-q\s*(\S+)/)
@@ -151,12 +160,6 @@ module OodCore
           memory_per_node = memory_per_node ? memory_per_node[1] : nil
           gpu_cores_per_process = script.content.match(/#PBS\s*--gpunum-lhost\s*=\s*(\S+)/)
           gpu_cores_per_process = gpu_cores_per_process ? gpu_cores_per_process[1] : nil
-
-          content = if script.shell_path.nil?
-                      script.content
-                    else
-                      "#!#{script.shell_path}\n#{script.content}"
-                    end
 
           stdout_path = script.output_path.nil? ? File.join(Dir.pwd, "stdout.txt") : script.output_path
           stderr_path = script.error_path.nil? ? File.join(File.dirname(stdout_path), "stderr.txt") : script.error_path
